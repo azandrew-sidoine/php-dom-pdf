@@ -1,0 +1,36 @@
+{
+    "name": "drewlabs/php-dompdf",
+    "description": "Simple Wrapper around php dompdf/dompdf library",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Azandrew",
+            "email": "azandrewdevelopper@gmail.com"
+        }
+    ],
+    "require": {
+        "dompdf/dompdf": "^0.8.3",
+        "symfony/http-foundation": "^4.3.4"
+    },
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Drewlabs\\Core\\Dompdf\\": "src/"
+        }
+    },
+    "repositories":[
+        {
+            "type": "vcs",
+            "url": "git@github.com:azandrew-sidoine/drewlabs-php-contracts.git"
+        },
+        {
+            "type": "vcs",
+            "url": "git@github.com:azandrew-sidoine/drewlabs-php-utils.git"
+        },
+        {
+            "type": "vcs",
+            "url": "git@github.com:azandrew-sidoine/drewlabs-php-core.git"
+        }
+    ]
+}
