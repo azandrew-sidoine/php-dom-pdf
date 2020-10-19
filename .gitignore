@@ -4,3 +4,4 @@
 /vendor
 /.idea
 src/**/tests
+composer.lock
