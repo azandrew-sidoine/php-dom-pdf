@@ -10,7 +10,7 @@
     ],
     "require": {
         "php": ">=5.3.0",
-        "dompdf/dompdf": "^0.8.3",
+        "dompdf/dompdf": "^0.8.6",
         "symfony/http-foundation": "^5.1.5"
     },
     "license": "MIT",
