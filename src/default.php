@@ -1,5 +1,5 @@
 <?php
-return array(
+return [
     /**
      * The location of the DOMPDF font directory
      *
@@ -209,4 +209,4 @@ return array(
      * Use the more-than-experimental HTML5 Lib parser
      */
     "enable_html5_parser" => false,
-);
+];
