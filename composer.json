@@ -10,8 +10,8 @@
     ],
     "require": {
         "php": ">=5.3.0",
-        "dompdf/dompdf": "^0.8.6",
-        "symfony/http-foundation": "^5.1.5"
+        "dompdf/dompdf": ">=1.0.2",
+        "symfony/http-foundation": ">=5.1.5"
     },
     "license": "MIT",
     "minimum-stability": "stable",
@@ -20,10 +20,10 @@
             "Drewlabs\\Core\\Dompdf\\": "src/"
         },
         "files": [
-            "helpers.php"
+            "src/proxies.php"
         ]
     },
-    "repositories":[
+    "repositories": [
         {
             "type": "vcs",
             "url": "git@github.com:liksoft/drewlabs-php-contracts.git"

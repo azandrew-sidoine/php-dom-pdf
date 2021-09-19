@@ -8,13 +8,13 @@ use Exception;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+use function Drewlabs\Core\Dompdf\Proxy\PathPrefixer;
+
 /**
  * @package [[Drewlabs\Core\Dompdf]]
  */
 class Dompdf implements DomPdfable
 {
-
-
     /**
      * PHP DomPdf instance
      *
@@ -23,18 +23,37 @@ class Dompdf implements DomPdfable
     private $dompdf;
 
     /**
-     * Undocumented variable
      *
      * @var boolean
      */
     private $rendered = false;
 
     /**
-     * @param PHPDomPdf $dompdf
+     * Path where generated pdf will be written
+     * 
+     * @var string
      */
-    public function __construct(PHPDomPdf $dompdf)
+    private $outputPath;
+
+    /**
+     * Creates an instance of the {@see Dompdf} class
+     * 
+     * @param array $options 
+     * @return self 
+     */
+    public function __construct(array $options = [])
     {
-        $this->dompdf = $dompdf;
+        $this->dompdf = new PHPDomPdf($options ?? []);
+
+        // #region Set the document output base path
+        $this->setOutputPath($options['output_path'] ?? realpath(__DIR__ . '/app/documents/'));
+        // #endregion
+    }
+
+    public function setOutputPath(string $path)
+    {
+        $this->outputPath = $path;
+        return $this;
     }
 
 
@@ -48,67 +67,35 @@ class Dompdf implements DomPdfable
         return $this->dompdf;
     }
 
-    /**
-     * Set the paper size (default A4)
-     *
-     * @param string $paper
-     * @param string $orientation
-     * @return $this
-     */
     public function setPaperOrientation($paper, $orientation = 'portrait')
     {
         $this->dompdf->setPaper($paper, $orientation);
         return $this;
     }
 
-
-    /**
-     * Load a HTML string
-     *
-     * @param string $string
-     * @param string $encoding Not used yet
-     * @return static
-     */
-    public function loadHTML($string, $encoding = null)
+    public function loadHTML(string $string, ?string $encoding = null)
     {
         $string = $this->transformSpecialCharacters($string);
         $this->dompdf->loadHtml($string, $encoding);
         $this->rendered = false;
         return $this;
     }
-    /**
-     * Load a HTML file
-     *
-     * @param string $file
-     * @return static
-     */
-    public function loadFile($file)
+
+    public function loadFile(string $path, ?string $encoding = null)
     {
-        $this->dompdf->loadHtmlFile($file);
+        $this->dompdf->loadHtmlFile($path, $encoding);
         $this->rendered = false;
         return $this;
     }
 
-    /**
-     * Add metadata to the document
-     *
-     * @param array $info
-     * @return static
-     */
-    public function addInfo($info)
+    public function addInfo(array $infos = [])
     {
-        foreach ($info as $name => $value) {
-            $this->dompdf->add_info($name, $value);
+        foreach ($infos ?? [] as $key => $value) {
+            $this->dompdf->add_info($key, $value);
         }
         return $this;
     }
 
-    /**
-     * Update the PHP DOM PDF Options
-     *
-     * @param array $options
-     * @return static
-     */
     public function setPHPDomPdfOptions(array $options)
     {
         $options = new Options($options);
@@ -116,11 +103,6 @@ class Dompdf implements DomPdfable
         return $this;
     }
 
-    /**
-     * Output the PDF as a string.
-     *
-     * @return string The rendered PDF as string
-     */
     public function printDocument()
     {
         if (!$this->rendered) {
@@ -129,74 +111,48 @@ class Dompdf implements DomPdfable
         return $this->dompdf->output();
     }
 
-    /**
-     * Save the PDF to a file. $flags parameter modified how the file write operation is performed.
-     *
-     * @param $filePath
-     * @param $flags
-     * @return static
-     */
-    public function writeDocument($filePath, $flags = null)
+
+    public function writeDocument(string $name, ?int $flags = null)
     {
-        file_put_contents($filePath, $this->printDocument(), $flags ? LOCK_EX : 0);
-        return $this;
+        $name = sprintf("%s.%s", uniqid(str_replace(".pdf", "", $name ?? '')), "pdf");
+        return @file_put_contents(
+            PathPrefixer($this->outputPath)->prefix($name),
+            $this->printDocument(),
+            $flags ? LOCK_EX : 0
+        );
     }
 
-    /**
-     * Make the PDF downloadable by the user
-     *
-     * @param string $filename
-     * @param string $disposition
-     * @return BinaryFileResponse
-     */
-    public function download($filename = 'document.pdf', $disposition = 'attachment')
-    {
-        $filePath = \drewlabs_packages_dompdf_storage_path("app" . DIRECTORY_SEPARATOR . uniqid() . "-$filename");
-        $this->writeDocument($filePath);
-        $response = new BinaryFileResponse($filePath, 200, array(
-            'Content-Type' => 'application/pdf'
-        ), true);
 
-        if (!is_null($filename)) {
-            return $response->setContentDisposition($disposition, $filename, 'document.pdf');
-        }
-        return $response->deleteFileAfterSend(true);
+    public function download(string $name = 'document.pdf', string $disposition = 'attachment')
+    {
+        $path = PathPrefixer($this->outputPath)->prefix($name);
+        // #region Write document to path
+        file_put_contents($path, $this->printDocument(), LOCK_EX);
+        // #endregion Write document to path
+        return (new BinaryFileResponse(
+            $path,
+            200,
+            ['Content-Type' => 'application/pdf'],
+            true
+        ))
+            ->setContentDisposition(
+                $disposition ?? 'attachement',
+                $name,
+                'document.pdf'
+            )
+            ->deleteFileAfterSend(true);
     }
+
     /**
      * Return a response with the PDF to show in the browser
      *
-     * @param string $filename
+     * @param string $name
      * @param \Closure $callback
      * @return StreamedResponse
      */
-    public function streamDownload($filename = 'document.pdf', $callback = null, $disposition = 'attachment')
+    public function stream(string $name = 'document.pdf', $callback = null, string $disposition = 'attachment')
     {
-        return $this->dompdf->stream($filename);
-        // $response = new StreamedResponse($callback, 200, array(
-        //     'Content-Type' => 'application/pdf'
-        // ));
-
-        // if (! is_null($filename)) {
-        //     $response->headers->set('Content-Disposition', $response->headers->makeDisposition(
-        //         $disposition,
-        //         $filename,
-        //         'document.pdf'
-        //     ));
-        // }
-
-        // return $response;
-    }
-
-    /**
-     * Render the PDF document
-     */
-    protected function render()
-    {
-        if (!$this->dompdf) {
-            throw new Exception('PDF Provider not initialized');
-        }
-        $this->dompdf->render();
-        $this->rendered = true;
+        return $this->dompdf->stream($name);
     }
 
     public function setEncryption($password)
@@ -208,8 +164,20 @@ class Dompdf implements DomPdfable
         return $this->dompdf->getCanvas()->{'get_cpdf'}()->setEncryption("pass", $password);
     }
 
+    /**
+     * Render the PDF document
+     */
+    private function render()
+    {
+        if (!$this->dompdf) {
+            throw new Exception('PDF Provider not initialized');
+        }
+        $this->dompdf->render();
+        $this->rendered = true;
+    }
 
-    protected function transformSpecialCharacters($subject)
+
+    private function transformSpecialCharacters($subject)
     {
         foreach (array('€' => '&#0128;', '£' => '&pound;') as $search => $replace) {
             $subject = str_replace($search, $replace, $subject);

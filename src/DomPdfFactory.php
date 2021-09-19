@@ -2,10 +2,9 @@
 
 namespace Drewlabs\Core\Dompdf;
 
-use Drewlabs\Contracts\Factory\IFactory;
-use Dompdf\Dompdf as PHPDomPdf;
+use function Drewlabs\Core\Dompdf\Proxy\DomPdf;
 
-class DomPdfFactory implements IFactory
+class DomPdfFactory implements PdfFactory
 {
     /**
      *
@@ -16,17 +15,23 @@ class DomPdfFactory implements IFactory
     /**
      * @inheritDoc
      */
-    public function make($options = null)
+    public function make($options = [])
     {
-        if (!isset($options)) {
-            $defaults = require __DIR__ . '/default.php';
-            $options = [];
-            foreach ($defaults as $key => $value) {
-                $key = strtolower(str_replace('DOMPDF_', '', $key));
-                $options[$key] = $value;
+        return $this->setDomPdfInstance((function ($options_) {
+            if (!is_array($options_) || empty($options_)) {
+                $defaults = require __DIR__ . '/../default.php';
+                foreach ($defaults as $key => $value) {
+                    $key = strtolower(str_replace('DOMPDF_', '', $key));
+                    $options_[$key] = $value;
+                }
             }
-        }
-        $this->pdf = new Dompdf(new PHPDomPdf($options));
+            return $options_ ?? [];
+        })($options ?? []));
+    }
+
+    private function setDomPdfInstance(array $options)
+    {
+        $this->pdf = DomPdf($options);
         return $this;
     }
 
