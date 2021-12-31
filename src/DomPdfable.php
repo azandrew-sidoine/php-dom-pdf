@@ -14,11 +14,11 @@ interface DomPdfable
     /**
      * Set the paper size (default A4)
      *
-     * @param string $paper
+     * @param string|array $paper
      * @param string $orientation
      * @return self
      */
-    public function setPaperOrientation($paper, $orientation = 'portrait');
+    public function setPaperOrientation($paper, ?string $orientation = 'portrait');
 
 
     /**

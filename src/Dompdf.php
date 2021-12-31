@@ -67,7 +67,7 @@ class Dompdf implements DomPdfable
         return $this->dompdf;
     }
 
-    public function setPaperOrientation($paper, $orientation = 'portrait')
+    public function setPaperOrientation($paper, ?string $orientation = 'portrait')
     {
         $this->dompdf->setPaper($paper, $orientation);
         return $this;
