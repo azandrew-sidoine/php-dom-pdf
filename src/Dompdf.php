@@ -1,20 +1,21 @@
 <?php
 
-namespace Drewlabs\Core\Dompdf;
+namespace Drewlabs\Dompdf;
 
+use DOMException;
 use Dompdf\Dompdf as PHPDomPdf;
+use Dompdf\Exception as DompdfException;
 use Dompdf\Options;
 use Exception;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use InvalidArgumentException;
+use Psr\Http\Message\StreamInterface;
+use RuntimeException;
+use SplFileInfo;
 
-/**
- * @package [[Drewlabs\Core\Dompdf]]
- */
-class Dompdf implements DomPdfable
+use function Drewlabs\Dompdf\Proxy\PathPrefixer;
+
+class Dompdf implements DomPdfable, IOReader, IOWriter
 {
-
-
     /**
      * PHP DomPdf instance
      *
@@ -23,105 +24,120 @@ class Dompdf implements DomPdfable
     private $dompdf;
 
     /**
-     * Undocumented variable
      *
      * @var boolean
      */
     private $rendered = false;
 
     /**
-     * @param PHPDomPdf $dompdf
+     * Path where generated pdf will be written
+     * 
+     * @var string
      */
-    public function __construct(PHPDomPdf $dompdf)
-    {
-        $this->dompdf = $dompdf;
-    }
-
+    private $outputPath;
 
     /**
-     * Get PHP DomPdf instance
-     *
-     * @return PHPDomPdf
+     * Creates an instance of the {@see Dompdf} class
+     * 
+     * @param PHPDomPdf $instance 
+     * @return self 
      */
-    public function getDOMPdfProvider()
+    public function __construct(PHPDomPdf $instance)
     {
-        return $this->dompdf;
+        $this->dompdf = $instance;
     }
 
     /**
-     * Set the paper size (default A4)
-     *
-     * @param string $paper
-     * @param string $orientation
-     * @return $this
+     * {@inheritDoc}
+     * 
+     * @return DomPdfable 
+     * @throws RuntimeException 
+     * @throws InvalidArgumentException 
      */
-    public function setPaperOrientation($paper, $orientation = 'portrait')
+    public function read($pathorstream)
     {
-        $this->dompdf->setPaper($paper, $orientation);
+        if ($pathorstream instanceof StreamInterface) {
+            return $this->html($pathorstream->__toString());
+        } else if ($pathorstream instanceof SplFileInfo) {
+            return $this->html($this->getPathContents($pathorstream));
+        } else if (null === $pathorstream) {
+            $pathorstream = '';
+        }
+        if (!is_string($pathorstream)) {
+            throw new InvalidArgumentException('Invalid parameter type passed to ' . __METHOD__ . '. Expected string|\SplFileInfo::class|' . StreamInterface::class);
+        }
+        if (false !== filter_var($pathorstream, FILTER_VALIDATE_URL)) {
+            return $this->resource($pathorstream);
+        }
+        $isdiskfile = @is_file($pathorstream);
+        if ($pathorstream === '' || !$isdiskfile) {
+            return $this->html($pathorstream);
+        }
+        if ($isdiskfile && ($path = new SplFileInfo($pathorstream))) {
+            return $this->html($this->getPathContents($path));
+        }
+        throw new RuntimeException('Unknown Error : Failed to read DOM string');
+    }
+
+    /**
+     * Creates a new instance of the DOMPdf class
+     * 
+     * @param array $options 
+     * @return static 
+     */
+    public static function new($options = [])
+    {
+        $result = is_callable($options) || ($options instanceof \Closure) ? ($options() ?? []) : ($options ?? []);
+        $object = new static(new PHPDomPdf($result));
+        $object->setOutputPath($options['output_path'] ?? realpath(__DIR__ . '/app/documents/'));
+        return $object;
+    }
+
+    public function setOutputPath(string $path)
+    {
+        $this->outputPath = $path;
         return $this;
     }
 
+    public function contraints($size, ?string $orientation = Orientation::PORTRAIT)
+    {
+        $this->dompdf->setPaper($size, $orientation);
+        return $this;
+    }
 
-    /**
-     * Load a HTML string
-     *
-     * @param string $string
-     * @param string $encoding Not used yet
-     * @return static
-     */
-    public function loadHTML($string, $encoding = null)
+    public function html(string $string, ?string $encoding = null)
     {
         $string = $this->transformSpecialCharacters($string);
         $this->dompdf->loadHtml($string, $encoding);
         $this->rendered = false;
         return $this;
     }
-    /**
-     * Load a HTML file
-     *
-     * @param string $file
-     * @return static
-     */
-    public function loadFile($file)
+
+    public function resource(string $path, ?string $encoding = null)
     {
-        $this->dompdf->loadHtmlFile($file);
+        $this->dompdf->loadHtmlFile($path, $encoding);
         $this->rendered = false;
         return $this;
     }
 
-    /**
-     * Add metadata to the document
-     *
-     * @param array $info
-     * @return static
-     */
-    public function addInfo($info)
+    public function addInfo(array $infos = [])
     {
-        foreach ($info as $name => $value) {
-            $this->dompdf->add_info($name, $value);
+        foreach ($infos ?? [] as $key => $value) {
+            method_exists($this->dompdf, 'add_info') ?
+                \Closure::fromCallable([$this->dompdf, 'add_info'])->__invoke($key, $value) :
+                \Closure::fromCallable([$this->dompdf, 'addInfo'])->__invoke($key, $value);
         }
         return $this;
     }
 
-    /**
-     * Update the PHP DOM PDF Options
-     *
-     * @param array $options
-     * @return static
-     */
-    public function setPHPDomPdfOptions(array $options)
+    public function setOptions(array $options)
     {
         $options = new Options($options);
         $this->dompdf->setOptions($options);
         return $this;
     }
 
-    /**
-     * Output the PDF as a string.
-     *
-     * @return string The rendered PDF as string
-     */
-    public function printDocument()
+    public function print()
     {
         if (!$this->rendered) {
             $this->render();
@@ -129,91 +145,90 @@ class Dompdf implements DomPdfable
         return $this->dompdf->output();
     }
 
-    /**
-     * Save the PDF to a file. $flags parameter modified how the file write operation is performed.
-     *
-     * @param $filePath
-     * @param $flags
-     * @return static
-     */
-    public function writeDocument($filePath, $flags = null)
+    public function write(string $name, ?int $flags = null)
     {
-        file_put_contents($filePath, $this->printDocument(), $flags ? LOCK_EX : 0);
-        return $this;
+        [$directory, $name] = $name[0] === DIRECTORY_SEPARATOR ? [dirname($name), basename($name)] : [$this->outputPath, $name];
+        $name = sprintf("%s.%s", uniqid(str_replace(".pdf", "", $name ?? '')), "pdf");
+        return @file_put_contents(PathPrefixer($directory)->prefix($name), $this->print(), $flags ? LOCK_EX : 0);
+    }
+
+    public function download(string $name = 'document.pdf', string $disposition = 'attachment')
+    {
+        return Response::new($this);
+    }
+
+    public function stream(string $name = 'document.pdf', $callback = null, string $disposition = 'attachment')
+    {
+        return $this->dompdf->stream($name);
     }
 
     /**
-     * Make the PDF downloadable by the user
-     *
-     * @param string $filename
-     * @param string $disposition
-     * @return BinaryFileResponse
+     * Add encryption to pdf instance
+     * 
+     * @param mixed $cypherText 
+     * @return mixed 
+     * @throws Exception 
+     * @throws DompdfException 
+     * @throws DOMException 
      */
-    public function download($filename = 'document.pdf', $disposition = 'attachment')
+    public function encrypt($cypherText)
     {
-        $filePath = \drewlabs_packages_dompdf_storage_path("app" . DIRECTORY_SEPARATOR . uniqid() . "-$filename");
-        $this->writeDocument($filePath);
-        $response = new BinaryFileResponse($filePath, 200, array(
-            'Content-Type' => 'application/pdf'
-        ), true);
-
-        if (!is_null($filename)) {
-            return $response->setContentDisposition($disposition, $filename, 'document.pdf');
+        if (method_exists($canvas = $this->dompdf->getCanvas(), 'get_cpdf')) {
+            if (!$this->rendered) {
+                $this->render();
+            }
+            \Closure::fromCallable([$canvas, 'get_cpdf'])->__invoke()->setEncryption("pass", $cypherText);
         }
-        return $response->deleteFileAfterSend(true);
     }
+
     /**
-     * Return a response with the PDF to show in the browser
+     * Get PHP DomPdf instance
      *
-     * @param string $filename
-     * @param \Closure $callback
-     * @return StreamedResponse
+     * @return PHPDomPdf
      */
-    public function streamDownload($filename = 'document.pdf', $callback = null, $disposition = 'attachment')
+    public function getInstance()
     {
-        return $this->dompdf->stream($filename);
-        // $response = new StreamedResponse($callback, 200, array(
-        //     'Content-Type' => 'application/pdf'
-        // ));
-
-        // if (! is_null($filename)) {
-        //     $response->headers->set('Content-Disposition', $response->headers->makeDisposition(
-        //         $disposition,
-        //         $filename,
-        //         'document.pdf'
-        //     ));
-        // }
-
-        // return $response;
+        return $this->dompdf;
     }
 
     /**
      * Render the PDF document
      */
-    protected function render()
+    private function render()
     {
-        if (!$this->dompdf) {
-            throw new Exception('PDF Provider not initialized');
-        }
         $this->dompdf->render();
         $this->rendered = true;
     }
 
-    public function setEncryption($password)
+    /**
+     * Replace HTML special characters in the subject string
+     * 
+     * @param mixed $subject 
+     * @return mixed 
+     */
+    private function transformSpecialCharacters(string $subject)
     {
-        if (!$this->dompdf) {
-            throw new Exception("PDF Provider not initialized");
-        }
-        $this->render();
-        return $this->dompdf->getCanvas()->{'get_cpdf'}()->setEncryption("pass", $password);
+        return htmlspecialchars($subject);
     }
 
-
-    protected function transformSpecialCharacters($subject)
+    /**
+     * Read content from a {@see \SplFileInfo} instance
+     * 
+     * @param SplFileInfo $object 
+     * @return string 
+     * @throws RuntimeException 
+     */
+    private function getPathContents(SplFileInfo $object)
     {
-        foreach (array('€' => '&#0128;', '£' => '&pound;') as $search => $replace) {
-            $subject = str_replace($search, $replace, $subject);
+        $error = null;
+        set_error_handler(function ($type, $msg) use (&$error) {
+            $error = $msg;
+        });
+        $content = file_get_contents($object->getRealPath());
+        restore_error_handler();
+        if (false === $content) {
+            throw new \RuntimeException($error ?? '');
         }
-        return $subject;
+        return $content;
     }
 }

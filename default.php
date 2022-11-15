@@ -1,5 +1,6 @@
 <?php
-return array(
+
+return [
     /**
      * The location of the DOMPDF font directory
      *
@@ -24,7 +25,7 @@ return array(
      * Times-Roman, Times-Bold, Times-BoldItalic, Times-Italic,
      * Symbol, ZapfDingbats.
      */
-    "font_dir" => drewlabs_packages_dompdf_storage_path('fonts/'), // advised by dompdf (https://github.com/dompdf/dompdf/pull/782)
+    "font_dir" => realpath(__DIR__ . '/cache/fonts/'), // advised by dompdf (https://github.com/dompdf/dompdf/pull/782)
     /**
      * The location of the DOMPDF font cache directory
      *
@@ -33,7 +34,12 @@ return array(
      *
      * Note: This directory must exist and be writable by the webserver process.
      */
-    "font_cache" => drewlabs_packages_dompdf_storage_path('fonts/'),
+    "font_cache" =>  realpath(__DIR__ . '/cache/fonts/'),
+
+    /**
+     * The location where documents will be written
+     */
+    "output_path" => realpath(__DIR__ . '/app/documents/'),
     /**
      * The location of a temporary directory.
      *
@@ -54,7 +60,8 @@ return array(
      * direct class use like:
      * $dompdf = new DOMPDF();	$dompdf->load_html($htmldata); $dompdf->render(); $pdfdata = $dompdf->output();
      */
-    "chroot" => realpath(base_path()),
+    "chroot" => realpath(__DIR__ . '/app/'),
+
     /**
      * Whether to enable font subsetting or not.
      */
@@ -209,4 +216,4 @@ return array(
      * Use the more-than-experimental HTML5 Lib parser
      */
     "enable_html5_parser" => false,
-);
+];
