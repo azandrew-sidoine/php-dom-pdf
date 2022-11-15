@@ -1,24 +1,20 @@
 <?php
 
-namespace Drewlabs\Core\Dompdf;
+namespace Drewlabs\Dompdf;
 
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @package [[Drewlabs\Core\Dompdf]]
- */
 interface DomPdfable
 {
 
     /**
      * Set the paper size (default A4)
      *
-     * @param string|array $paper
+     * @param string|array $size
      * @param string $orientation
      * @return self
      */
-    public function setPaperOrientation($paper, ?string $orientation = 'portrait');
+    public function contraints($size, ?string $orientation = Orientation::PORTRAIT);
 
 
     /**
@@ -28,7 +24,7 @@ interface DomPdfable
      * @param string|null $encoding Not used yet
      * @return self
      */
-    public function loadHTML(string $string, ?string $encoding = null);
+    public function html(string $string, ?string $encoding = null);
 
     /**
      * Load a HTML file
@@ -37,7 +33,7 @@ interface DomPdfable
      * @param string|null $encoding
      * @return self
      */
-    public function loadFile(string $path, ?string $encoding = null);
+    public function resource(string $path, ?string $encoding = null);
 
     /**
      * Add metadata to the document
@@ -53,38 +49,29 @@ interface DomPdfable
      * @param array $options
      * @return static
      */
-    public function setPHPDomPdfOptions(array $options);
+    public function setOptions(array $options);
 
     /**
      * Output the PDF as a string.
      *
      * @return string The rendered PDF as string
      */
-    public function printDocument();
-
-    /**
-     * Save the PDF to a file. $flags parameter modified how the file write operation is performed.
-     *
-     * @param string $path
-     * @param $flags
-     * @return int|false
-     */
-    public function writeDocument(string $path, ?int $flags = null);
+    public function print();
 
     /**
      * Make the PDF downloadable by the user
      *
      * @param string $filename
      * @param string $disposition
-     * @return BinaryFileResponse
+     * @return Response
      */
     public function download(string $name = 'document.pdf', string $disposition = 'attachment');
+
     /**
      * Return a response with the PDF to show in the browser
      *
      * @param string $name
-     * @param \Closure|null $callback
-     * @return StreamedResponse
+     * @return void
      */
-    public function stream(string $name = 'document.pdf', $callback = null, string $disposition = 'attachment');
+    public function stream(string $name = 'document.pdf');
 }

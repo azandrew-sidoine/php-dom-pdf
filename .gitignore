@@ -4,6 +4,5 @@
 /vendor
 /.idea
 src/**/tests
-composer.lock
 index.php
 document.html

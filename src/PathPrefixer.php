@@ -1,6 +1,6 @@
 <?php
 
-namespace Drewlabs\Core\Dompdf;
+namespace Drewlabs\Dompdf;
 
 class PathPrefixer
 {
@@ -29,13 +29,10 @@ class PathPrefixer
      */
     public function prefix(string $path)
     {
-        $path = implode(
+        // In case the path starts with / we condider it as an absolue path
+        return $path[0] === DIRECTORY_SEPARATOR ? $path : implode(
             DIRECTORY_SEPARATOR,
-            [
-                rtrim($this->base ?? sys_get_temp_dir(), DIRECTORY_SEPARATOR),
-                $path
-            ]
+            [rtrim($this->base ?? sys_get_temp_dir(), DIRECTORY_SEPARATOR),$path]
         );
-        return $path;
     }
 }

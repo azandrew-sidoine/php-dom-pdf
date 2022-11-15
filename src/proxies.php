@@ -1,12 +1,13 @@
 <?php
 
-namespace Drewlabs\Core\Dompdf\Proxy;
+namespace Drewlabs\Dompdf\Proxy;
 
-use Drewlabs\Core\Dompdf\Dompdf;
-use Drewlabs\Core\Dompdf\DomPdfFactory;
-use Drewlabs\Core\Dompdf\PathPrefixer;
-use Drewlabs\Core\Dompdf\PdfFactory;
-use Drewlabs\Core\Dompdf\DomPdfable;
+use Drewlabs\Dompdf\Dompdf;
+use Drewlabs\Dompdf\Factory;
+use Drewlabs\Dompdf\PathPrefixer;
+use Drewlabs\Dompdf\FactoryInterface;
+use Drewlabs\Dompdf\DomPdfable;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Proxy function to an instance of {@see PathPrefixer}
@@ -22,20 +23,25 @@ function PathPrefixer(string $base)
 /**
  * Proxy function to an instance of {@see PdfFactory}
  * 
- * @return PdfFactory 
+ * @return FactoryInterface 
  */
 function PdfFactory()
 {
-    return new DomPdfFactory();
+    return new Factory();
 }
 
 /**
  * Proxy function to an instance of {@see DomPdfable}
  * 
- * @param array $options 
+ * @param array|\Closure $options 
+ * @param string|\SplFileInfo|StreamInterface $pathorstream
  * @return DomPdfable 
  */
-function DomPdf(array $options = [])
+function DomPdf($options = [], $pathorstream = null)
 {
-    return new DomPdf($options);
+    $pdf = DomPdf::new($options);
+    if (null !== $pathorstream) {
+        $pdf = $pdf->read($pathorstream);
+    }
+    return $pdf;
 }
