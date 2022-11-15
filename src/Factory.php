@@ -2,21 +2,19 @@
 
 namespace Drewlabs\Core\Dompdf;
 
-use Drewlabs\Contracts\Factory\IFactory;
 use Dompdf\Dompdf as PHPDomPdf;
 
-class DomPdfFactory implements IFactory
+class Factory
 {
-    /**
-     *
-     * @var DomPdfable
-     */
-    protected $pdf;
 
     /**
-     * @inheritDoc
+     * Creates an instance of {@see \Drewlabs\DomPdfable} using user provided
+     * $options parameter.
+     * 
+     * @param mixed $options 
+     * @return DomPdfable 
      */
-    public function make($options = null)
+    public function create($options = null)
     {
         if (!isset($options)) {
             $defaults = require __DIR__ . '/default.php';
@@ -26,15 +24,6 @@ class DomPdfFactory implements IFactory
                 $options[$key] = $value;
             }
         }
-        $this->pdf = new Dompdf(new PHPDomPdf($options));
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function resolve()
-    {
-        return $this->pdf;
+        return new Dompdf(new PHPDomPdf($options));
     }
 }
