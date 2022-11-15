@@ -107,7 +107,7 @@ class Response extends BaseResponse
      * {@inheritdoc}
      */
     #[\ReturnTypeWillChange]
-    public function prepare(Request $request)
+    public function prepare(Request $request): static
     {
         $this->headers->set('Content-Length', $this->getStream()->getSize());
         if (!$this->headers->has('Accept-Ranges')) {
@@ -133,7 +133,7 @@ class Response extends BaseResponse
      * {@inheritdoc}
      */
     #[\ReturnTypeWillChange]
-    public function sendContent()
+    public function sendContent(): static
     {
         if (!$this->isSuccessful()) {
             return parent::sendContent();
@@ -153,7 +153,7 @@ class Response extends BaseResponse
      * @throws \LogicException when the content is not null
      */
     #[\ReturnTypeWillChange]
-    public function setContent($content)
+    public function setContent($content): static
     {
         if (null !== $content) {
             throw new \LogicException('The content cannot be set on a Psr7StreamResponse instance.');
@@ -167,7 +167,7 @@ class Response extends BaseResponse
      * @return false
      */
     #[\ReturnTypeWillChange]
-    public function getContent()
+    public function getContent(): string|false
     {
         return false;
     }
