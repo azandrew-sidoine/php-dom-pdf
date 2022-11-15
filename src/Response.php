@@ -24,6 +24,13 @@ class Response extends BaseResponse
     private $stream;
 
     /**
+     * Response content type header
+     * 
+     * @var string
+     */
+    private $mimeType;
+
+    /**
      * Creates and instance of {@see Response} class
      * 
      * @param null|string $name 
@@ -33,7 +40,8 @@ class Response extends BaseResponse
     public function __construct(?string $name = 'document.pdf', ?string $disposition = 'attachment')
     {
         parent::__construct(null, 200, ['Content-Type' => 'application/pdf']);
-        $this->setContentDisposition($name ?? 'document.pdf', $disposition ?? 'attachement');
+        $this->withContentType('application/pdf')
+            ->setContentDisposition($name ?? 'document.pdf', $disposition ?? 'attachement');
     }
 
     /**
