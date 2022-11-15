@@ -33,13 +33,17 @@ function PdfFactory()
 /**
  * Proxy function to an instance of {@see DomPdfable}
  * 
- * @param array|\Closure $options 
+ * @param array|\Closure|string $optionsorstream 
  * @param string|\SplFileInfo|StreamInterface $pathorstream
  * @return DomPdfable 
  */
-function DomPdf($options = [], $pathorstream = null)
+function DomPdf($optionsorstream = [], $pathorstream = null)
 {
-    $pdf = DomPdf::new($options);
+    if (is_string($optionsorstream)) {
+        $pathorstream = $optionsorstream;
+        $optionsorstream = require __DIR__ . '/../default.php';
+    }
+    $pdf = DomPdf::new($optionsorstream);
     if (null !== $pathorstream) {
         $pdf = $pdf->read($pathorstream);
     }

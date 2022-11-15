@@ -97,7 +97,7 @@ $pdf = $pdf->resource('file:///home/users/dev/documents/document.pdf');
 // ...
 $pdf = DomPdf([/* DOMPdf otpions */]);
 
-$pdf->contraints(Drewlabs\Dompdf\Size::A4, \Drewlabs\Dompdf\Orientation::PORTRAIT);
+$pdf->constraints(Drewlabs\Dompdf\Size::A4, \Drewlabs\Dompdf\Orientation::PORTRAIT);
 ```
 
 - Print PDF content
@@ -122,7 +122,7 @@ $pdf = DomPdf([/* DOMPdf otpions */]);
 $response = $pdf->download(); // Symfony HTTP response
 
 // To send the response to request client, developper must call $response->send() method
-$response->send();
+$response->prepare(new Request::createFromGlobals())->send();
 ```
 
 - Streaming content

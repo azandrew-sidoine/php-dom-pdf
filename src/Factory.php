@@ -1,6 +1,6 @@
 <?php
 
-namespace Drewlabs\Core\Dompdf;
+namespace Drewlabs\Dompdf;
 
 use Dompdf\Dompdf as PHPDomPdf;
 

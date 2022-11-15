@@ -21,7 +21,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
      *
      * @var PHPDomPdf
      */
-    private $dompdf;
+    private $instance;
 
     /**
      *
@@ -44,7 +44,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
      */
     public function __construct(PHPDomPdf $instance)
     {
-        $this->dompdf = $instance;
+        $this->instance = $instance;
     }
 
     /**
@@ -99,23 +99,23 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
         return $this;
     }
 
-    public function contraints($size, ?string $orientation = Orientation::PORTRAIT)
+    public function constraints($size, ?string $orientation = Orientation::PORTRAIT)
     {
-        $this->dompdf->setPaper($size, $orientation);
+        $this->instance->setPaper($size, $orientation);
         return $this;
     }
 
     public function html(string $string, ?string $encoding = null)
     {
-        $string = $this->transformSpecialCharacters($string);
-        $this->dompdf->loadHtml($string, $encoding);
+        $string = html_entity_decode($this->transformSpecialCharacters($string));
+        $this->instance->loadHtml($string, $encoding);
         $this->rendered = false;
         return $this;
     }
 
     public function resource(string $path, ?string $encoding = null)
     {
-        $this->dompdf->loadHtmlFile($path, $encoding);
+        $this->instance->loadHtmlFile($path, $encoding);
         $this->rendered = false;
         return $this;
     }
@@ -123,9 +123,9 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
     public function addInfo(array $infos = [])
     {
         foreach ($infos ?? [] as $key => $value) {
-            method_exists($this->dompdf, 'add_info') ?
-                \Closure::fromCallable([$this->dompdf, 'add_info'])->__invoke($key, $value) :
-                \Closure::fromCallable([$this->dompdf, 'addInfo'])->__invoke($key, $value);
+            method_exists($this->instance, 'add_info') ?
+                \Closure::fromCallable([$this->instance, 'add_info'])->__invoke($key, $value) :
+                \Closure::fromCallable([$this->instance, 'addInfo'])->__invoke($key, $value);
         }
         return $this;
     }
@@ -133,7 +133,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
     public function setOptions(array $options)
     {
         $options = new Options($options);
-        $this->dompdf->setOptions($options);
+        $this->instance->setOptions($options);
         return $this;
     }
 
@@ -142,7 +142,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
         if (!$this->rendered) {
             $this->render();
         }
-        return $this->dompdf->output();
+        return $this->instance->output();
     }
 
     public function write(string $name, ?int $flags = null)
@@ -159,7 +159,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
 
     public function stream(string $name = 'document.pdf', $callback = null, string $disposition = 'attachment')
     {
-        return $this->dompdf->stream($name);
+        return $this->instance->stream($name);
     }
 
     /**
@@ -173,7 +173,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
      */
     public function encrypt($cypherText)
     {
-        if (method_exists($canvas = $this->dompdf->getCanvas(), 'get_cpdf')) {
+        if (method_exists($canvas = $this->instance->getCanvas(), 'get_cpdf')) {
             if (!$this->rendered) {
                 $this->render();
             }
@@ -188,7 +188,12 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
      */
     public function getInstance()
     {
-        return $this->dompdf;
+        return $this->instance;
+    }
+
+    public function __destruct()
+    {
+        $this->instance = null;
     }
 
     /**
@@ -196,7 +201,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
      */
     private function render()
     {
-        $this->dompdf->render();
+        $this->instance->render();
         $this->rendered = true;
     }
 
@@ -208,7 +213,7 @@ class Dompdf implements DomPdfable, IOReader, IOWriter
      */
     private function transformSpecialCharacters(string $subject)
     {
-        return htmlspecialchars($subject);
+        return htmlentities($subject);
     }
 
     /**

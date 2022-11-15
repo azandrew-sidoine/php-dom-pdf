@@ -14,7 +14,7 @@ interface DomPdfable
      * @param string $orientation
      * @return self
      */
-    public function contraints($size, ?string $orientation = Orientation::PORTRAIT);
+    public function constraints($size, ?string $orientation = Orientation::PORTRAIT);
 
 
     /**
